@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CV Builder</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #13131f;
+  --panel: #1a1a2e;
+  --card: #22223b;
+  --border: #2d2d4e;
+  --accent: #6c8fff;
+  --text: #e0e0f0;
+  --muted: #8888aa;
+  --danger: #ff6b6b;
+  --success: #6bffb8;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ── LEFT PANEL ── */
+#form-panel {
+  width: 400px;
+  min-width: 340px;
+  height: 100vh;
+  overflow-y: auto;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+#form-panel::-webkit-scrollbar { width: 5px; }
+#form-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+#panel-header {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  z-index: 10;
+}
+#panel-header h1 { font-size: 14px; font-weight: 700; letter-spacing: 0.3px; margin-bottom: 10px; }
+
+/* profile bar */
+#profile-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+#profile-select {
+  flex: 1;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+#profile-select:focus { border-color: var(--accent); }
+#save-status {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+  min-width: 50px;
+  text-align: right;
+}
+#save-status.saving { color: #facc15; }
+#save-status.saved  { color: var(--success); }
+#save-status.error  { color: var(--danger); }
+
+#form-body { padding: 14px 16px 40px; }
+
+.section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--accent);
+  margin: 22px 0 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--border);
+}
+.section-label:first-child { margin-top: 4px; }
+
+label {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 3px;
+  margin-top: 10px;
+}
+label:first-child { margin-top: 0; }
+
+input[type=text], textarea {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 7px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input[type=text]:focus, textarea:focus { border-color: var(--accent); }
+textarea { resize: vertical; min-height: 64px; }
+
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 11px; border-radius: 6px;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; border: none; transition: all 0.15s;
+  font-family: inherit;
+}
+.btn-accent { background: var(--accent); color: #fff; }
+.btn-accent:hover { filter: brightness(1.15); }
+.btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.btn-ghost:hover { background: var(--card); }
+.btn-danger { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
+.btn-danger:hover { background: #ff6b6b18; }
+.btn-sm { padding: 4px 9px; font-size: 11px; }
+
+.entry-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.entry-head {
+  display: flex; align-items: center;
+  padding: 9px 12px; cursor: pointer;
+  user-select: none; gap: 8px;
+}
+.entry-head:hover { background: #2a2a45; }
+.entry-chevron { font-size: 10px; color: var(--muted); transition: transform 0.2s; }
+.entry-chevron.open { transform: rotate(90deg); }
+.entry-title { flex: 1; font-size: 12px; font-weight: 600; }
+.entry-body { padding: 0 12px 12px; display: none; }
+.entry-body.open { display: block; }
+.add-btn-row { margin-top: 6px; }
+
+/* ── RIGHT PANEL ── */
+#preview-panel {
+  flex: 1; height: 100vh; overflow-y: auto;
+  background: #d8d8d8;
+  display: flex; flex-direction: column; align-items: center; padding: 0;
+}
+#preview-panel::-webkit-scrollbar { width: 6px; }
+#preview-panel::-webkit-scrollbar-thumb { background: #bbb; border-radius: 3px; }
+
+#toolbar {
+  width: 100%; background: #c8c8c8;
+  border-bottom: 1px solid #b0b0b0;
+  padding: 10px 20px;
+  display: flex; align-items: center; gap: 10px;
+  position: sticky; top: 0; z-index: 5;
+}
+#tab-hint { font-size: 11px; color: #666; margin-right: auto; }
+
+.tab-group {
+  display: flex; background: #b4b4b4;
+  border-radius: 7px; padding: 3px; gap: 3px;
+}
+.tab-btn {
+  padding: 4px 14px; border-radius: 5px;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; border: none;
+  background: transparent; color: #555;
+  transition: all 0.15s; font-family: inherit;
+}
+.tab-btn.active { background: #fff; color: #222; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+
+#cv-wrap {
+  padding: 24px 20px 48px;
+  width: 100%; display: flex; justify-content: center;
+}
+
+/* ── ATS PREVIEW ── */
+#cv-ats {
+  display: none;
+  width: 794px; min-height: 1123px;
+  background: #fff;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 9.5pt; line-height: 1.35; color: #111;
+  padding: 9mm 14mm 8mm;
+}
+#cv-ats.visible { display: block; }
+#cv.hidden { display: none; }
+
+#cv-ats header { margin-bottom: 9px; }
+#cv-ats .name { font-size: 18pt; font-weight: 700; line-height: 1.1; }
+#cv-ats .jobtitle { font-size: 10pt; color: #444; margin-top: 2px; margin-bottom: 4px; }
+#cv-ats .contact-bar { font-size: 8.5pt; color: #333; }
+#cv-ats .sep { margin: 0 6px; color: #bbb; }
+#cv-ats section { margin-bottom: 9px; }
+#cv-ats h2 {
+  font-size: 8.5pt; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.7px;
+  border-bottom: 1px solid #111; padding-bottom: 1px; margin-bottom: 5px;
+}
+#cv-ats p { font-size: 9.5pt; color: #222; }
+#cv-ats .entry { margin-bottom: 7px; }
+#cv-ats .entry:last-child { margin-bottom: 0; }
+#cv-ats .entry-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+#cv-ats .entry-co { font-weight: 700; font-size: 9.5pt; }
+#cv-ats .entry-dates { font-size: 8.5pt; color: #555; white-space: nowrap; }
+#cv-ats .entry-role { font-size: 9pt; font-style: italic; color: #444; margin-bottom: 2px; }
+#cv-ats .entry-detail { font-size: 8.5pt; color: #555; margin-top: 1px; }
+#cv-ats ul { padding-left: 14px; margin-top: 2px; }
+#cv-ats li { font-size: 9pt; color: #333; margin-bottom: 1px; }
+
+/* ── CV DESIGN TEMPLATE ── */
+#cv {
+  width: 794px; min-height: 1123px;
+  background: #fff;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10.2pt; line-height: 1.45; color: #1a1a1a;
+  display: flex; flex-direction: column;
+}
+.cv-header { padding: 32px 36px 20px; border-bottom: 2px solid #1a1a1a; }
+.cv-name { font-size: 22pt; font-weight: 700; color: #111; line-height: 1.1; }
+.cv-jobtitle { font-size: 11pt; color: #444; margin-top: 4px; }
+.cv-body { display: flex; flex: 1; }
+.cv-col-left { width: 248px; min-width: 248px; padding: 20px 18px 20px 36px; border-right: 1px solid #d0d0d0; }
+.cv-col-right { flex: 1; padding: 20px 24px 20px 22px; }
+.cv-sec { margin-bottom: 18px; }
+.cv-sec:last-child { margin-bottom: 0; }
+.cv-sec-title { font-size: 10pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: #111; border-bottom: 1.5px solid #222; padding-bottom: 2px; margin-bottom: 9px; }
+.cv-col-left .cv-sec-title { font-size: 9pt; border-bottom-color: #5a6aaa; color: #2a3060; margin-bottom: 8px; }
+.cv-contact-item { display: flex; align-items: flex-start; gap: 6px; font-size: 9pt; color: #333; margin-bottom: 5px; line-height: 1.35; word-break: break-all; }
+.cv-contact-icon { color: #5a6aaa; min-width: 12px; margin-top: 1px; font-style: normal; }
+.cv-left-list { list-style: none; padding: 0; margin: 0; }
+.cv-left-list li { font-size: 9.5pt; color: #333; padding: 2px 0; border-bottom: 1px dotted #d0d0dc; }
+.cv-left-list li:last-child { border-bottom: none; }
+.cv-lang-item { margin-bottom: 5px; font-size: 9.5pt; }
+.cv-lang-item strong { color: #111; display: block; }
+.cv-lang-item span { color: #555; font-size: 9pt; }
+.cv-cert-left { margin-bottom: 8px; font-size: 9.5pt; }
+.cv-cert-left:last-child { margin-bottom: 0; }
+.cv-cert-left-name { font-weight: 700; color: #111; }
+.cv-cert-left-sub { color: #555; font-size: 9pt; margin-top: 1px; }
+.cv-summary { font-size: 10pt; color: #333; line-height: 1.55; }
+.cv-entry { margin-bottom: 12px; }
+.cv-entry:last-child { margin-bottom: 0; }
+.cv-entry-hdr { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.cv-entry-co { font-weight: 700; font-size: 10.5pt; }
+.cv-entry-dates { font-size: 9pt; color: #555; white-space: nowrap; flex-shrink: 0; }
+.cv-entry-role { font-size: 10pt; color: #444; font-style: italic; margin-bottom: 3px; }
+.cv-entry ul { padding-left: 16px; margin-top: 3px; }
+.cv-entry ul li { font-size: 9.5pt; color: #333; margin-bottom: 2px; }
+.cv-edu-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+.cv-edu-row:last-child { margin-bottom: 0; }
+.cv-edu-deg { font-weight: 700; font-size: 10pt; }
+.cv-edu-school { font-size: 9.5pt; color: #444; margin-top: 1px; }
+.cv-edu-dates { font-size: 9pt; color: #555; white-space: nowrap; flex-shrink: 0; padding-top: 2px; }
+
+/* Print */
+@media print {
+  body { background: white !important; }
+  #form-panel, #toolbar { display: none !important; }
+  #preview-panel { padding: 0 !important; background: white !important; overflow: visible !important; height: auto !important; display: block !important; }
+  #cv-wrap { padding: 0 !important; display: block !important; }
+  #cv { box-shadow: none !important; width: 100% !important; min-height: auto !important; }
+  #cv-ats { box-shadow: none !important; width: 100% !important; min-height: auto !important; padding: 9mm 14mm 8mm !important; }
+  @page { margin: 0; size: A4; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ LEFT PANEL ═══════════════ -->
+<div id="form-panel">
+  <div id="panel-header">
+    <h1>CV Builder</h1>
+    <div id="profile-bar">
+      <select id="profile-select" onchange="loadProfile(this.value)"></select>
+      <button class="btn btn-accent btn-sm" onclick="newProfile()" title="Nouveau profil">+</button>
+      <button class="btn btn-ghost btn-sm" onclick="renameProfile()" title="Renommer">✎</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteProfile()" title="Supprimer">✕</button>
+      <span id="save-status">—</span>
+    </div>
+  </div>
+  <div id="form-body">
+
+    <div class="section-label">Informations personnelles</div>
+    <label>Nom complet</label>
+    <input type="text" id="f-name">
+    <label>Titre / Poste visé</label>
+    <input type="text" id="f-title">
+    <div class="g2">
+      <div><label>Email</label><input type="text" id="f-email"></div>
+      <div><label>Téléphone</label><input type="text" id="f-phone"></div>
+    </div>
+    <div class="g2">
+      <div><label>Ville</label><input type="text" id="f-location"></div>
+      <div><label>GitHub</label><input type="text" id="f-github"></div>
+      <div><label>Site web</label><input type="text" id="f-website"></div>
+    </div>
+    <label>LinkedIn (optionnel)</label>
+    <input type="text" id="f-linkedin">
+
+    <div class="section-label">Profil / Résumé</div>
+    <textarea id="f-summary" rows="4"></textarea>
+
+    <div class="section-label">Compétences techniques</div>
+    <label>Liste séparée par des virgules</label>
+    <textarea id="f-skills" rows="3"></textarea>
+
+    <div class="section-label">Expériences professionnelles</div>
+    <div id="exp-list"></div>
+    <div class="add-btn-row">
+      <button class="btn btn-ghost btn-sm" onclick="addExp()">+ Ajouter une expérience</button>
+    </div>
+
+    <div class="section-label">Projets</div>
+    <div id="proj-list"></div>
+    <div class="add-btn-row">
+      <button class="btn btn-ghost btn-sm" onclick="addProj()">+ Ajouter un projet</button>
+    </div>
+
+    <div class="section-label">Formations</div>
+    <div id="edu-list"></div>
+    <div class="add-btn-row">
+      <button class="btn btn-ghost btn-sm" onclick="addEdu()">+ Ajouter une formation</button>
+    </div>
+
+    <div class="section-label">Certifications</div>
+    <div id="cert-list"></div>
+    <div class="add-btn-row">
+      <button class="btn btn-ghost btn-sm" onclick="addCert()">+ Ajouter une certification</button>
+    </div>
+
+    <div class="section-label">Langues</div>
+    <div id="lang-list"></div>
+    <div class="add-btn-row">
+      <button class="btn btn-ghost btn-sm" onclick="addLang()">+ Ajouter une langue</button>
+    </div>
+
+    <div class="section-label">Qualités / Soft skills</div>
+    <label>Séparées par des virgules</label>
+    <textarea id="f-soft" rows="2"></textarea>
+
+  </div>
+</div>
+
+<!-- ═══════════════ RIGHT PANEL ═══════════════ -->
+<div id="preview-panel">
+  <div id="toolbar">
+    <div class="tab-group">
+      <button id="tab-design" class="tab-btn active" onclick="switchTab('design')">Design</button>
+      <button id="tab-ats"    class="tab-btn"        onclick="switchTab('ats')">ATS</button>
+    </div>
+    <span id="tab-hint">2 colonnes — aperçu visuel</span>
+    <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 Imprimer / PDF</button>
+  </div>
+  <div id="cv-wrap">
+    <div id="cv"></div>
+    <div id="cv-ats"></div>
+  </div>
+</div>
+
+<script>
+// ── DEFAULT DATA (used for first profile) ─────────────
+const DEFAULT = {
+  name: 'Joao Silva',
+  title: 'Développeur Web & Web Mobile',
+  email: 'joao@madebyjoao.fr',
+  phone: '06 95 70 06 79',
+  location: 'Cannes La Bocca, 06150',
+  github: 'github.com/madebyjoao',
+  website: 'madebyjoao.fr',
+  linkedin: '',
+  summary: "En reconversion vers le développement web, je recherche une alternance d'un an. Ancien responsable travaux, je dispose de solides compétences en gestion de projet, organisation et résolution de problèmes. Je conçois des applications web, avec un fort intérêt pour les architectures backend et la sécurité applicative.",
+  skills: 'ReactJS, JavaScript (ES6+), Node.js / Express, TailwindCSS, MySQL, HTML5 / CSS3, Sequelize CLI, Angular, Git / GitHub, Python - Scripting',
+  soft: "Esprit d'équipe, Apprentissage rapide, Adaptabilité, Sens des responsabilités",
+  experiences: [
+    { company: 'NeoGec', role: 'Développeur Web Freelance', start: '2026', end: 'En cours', bullets: "Conception et développement d'un site web professionnel complet\nAnalyse des besoins client et définition des fonctionnalités\nIntégration front-end : HTML5, CSS3, React\nDéveloppement backend avec Node.js / Express\nDéploiement et mise en production du site" },
+    { company: 'ST Aménagements', role: 'Responsable Travaux', start: '2022', end: '2023', bullets: "Gestion et coordination de projets : planning, ressources, délais\nOrganisation et supervision des équipes terrain\nOptimisation des processus internes\nRelation client et suivi des prestations" },
+    { company: 'Duperrex Frères / Migros MVM (Suisse)', role: 'Chef de déménagement', start: '2015', end: '2022', bullets: "Planification et organisation des déménagements\nCoordination des équipes et gestion des priorités\nRelation client et prestation de service personnalisé\nGestion logistique et respect des délais" }
+  ],
+  projects: [
+    { name: 'Portfolio Builder', status: 'En cours', bullets: "Application web de création de portfolios personnalisés\nSystème de templates dynamiques\nAPI REST avec Node.js / Express\nDéploiement automatisé des portfolios utilisateurs" }
+  ],
+  educations: [
+    { degree: 'Développeur Web et Web Mobile', school: 'La Plateforme — Cannes', start: '2025', end: 'En cours' },
+    { degree: 'Formation Systems Administrator', school: 'La Plateforme — Cannes', start: '2024', end: '2025' },
+    { degree: 'Licence en Chimie (3 ans)', school: 'FCUP — Porto, Portugal', start: '2012', end: '2014' },
+    { degree: 'Baccalauréat Sciences & Technologies', school: 'ESDAH — Porto, Portugal', start: '2009', end: '2012' }
+  ],
+  certifications: [
+    { name: 'Formation Développement Web', issuer: 'Codecademy', year: '2025 (en cours)', detail: 'Angular, Node.js & Express, Sécurité applicative (SQL Injection, XSS)' }
+  ],
+  languages: [
+    { lang: 'Portugais', level: 'Langue maternelle' },
+    { lang: 'Anglais', level: 'Bilingue (C2)' },
+    { lang: 'Français', level: 'Professionnel (B2/C1)' }
+  ]
+};
+
+// ── STATE ─────────────────────────────────────────────
+let currentProfileId = null;
+let saveTimer = null;
+
+// ── PROFILE API ───────────────────────────────────────
+async function fetchProfiles() {
+  const res = await fetch('/api/profiles');
+  return res.json();
+}
+
+async function fetchProfile(id) {
+  const res = await fetch(`/api/profiles/${id}`);
+  return res.json();
+}
+
+async function createProfile(name, data) {
+  const res = await fetch('/api/profiles', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, data })
+  });
+  return res.json();
+}
+
+async function saveProfile(id, data, name) {
+  await fetch(`/api/profiles/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data, name })
+  });
+}
+
+async function deleteProfileApi(id) {
+  await fetch(`/api/profiles/${id}`, { method: 'DELETE' });
+}
+
+// ── PROFILE UI ────────────────────────────────────────
+async function refreshProfileSelect(selectId) {
+  const profiles = await fetchProfiles();
+  const sel = document.getElementById('profile-select');
+  sel.innerHTML = profiles.map(p =>
+    `<option value="${p.id}" ${p.id === selectId ? 'selected' : ''}>${p.name}</option>`
+  ).join('');
+  return profiles;
+}
+
+async function loadProfile(id) {
+  id = parseInt(id);
+  currentProfileId = id;
+  const profile = await fetchProfile(id);
+  setFormData(profile.data);
+  renderAll();
+  setSaveStatus('saved');
+}
+
+async function newProfile() {
+  const name = prompt('Nom du nouveau profil :');
+  if (!name) return;
+  const created = await createProfile(name, {});
+  await refreshProfileSelect(created.id);
+  await loadProfile(created.id);
+}
+
+async function renameProfile() {
+  if (!currentProfileId) return;
+  const sel = document.getElementById('profile-select');
+  const current = sel.options[sel.selectedIndex]?.text || '';
+  const name = prompt('Nouveau nom :', current);
+  if (!name) return;
+  await saveProfile(currentProfileId, getFormData(), name);
+  await refreshProfileSelect(currentProfileId);
+}
+
+async function deleteProfile() {
+  if (!currentProfileId) return;
+  const sel = document.getElementById('profile-select');
+  const name = sel.options[sel.selectedIndex]?.text || '';
+  if (!confirm(`Supprimer le profil "${name}" ?`)) return;
+  await deleteProfileApi(currentProfileId);
+  const profiles = await refreshProfileSelect(null);
+  if (profiles.length) {
+    await loadProfile(profiles[0].id);
+  } else {
+    currentProfileId = null;
+    setFormData({});
+    renderAll();
+  }
+}
+
+function setSaveStatus(state) {
+  const el = document.getElementById('save-status');
+  if (state === 'saving') { el.textContent = 'Sauvegarde…'; el.className = 'saving'; }
+  else if (state === 'saved') { el.textContent = '✓ Sauvegardé'; el.className = 'saved'; }
+  else if (state === 'error') { el.textContent = '⚠ Erreur'; el.className = 'error'; }
+  else { el.textContent = '—'; el.className = ''; }
+}
+
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  setSaveStatus('saving');
+  saveTimer = setTimeout(async () => {
+    if (!currentProfileId) return;
+    try {
+      await saveProfile(currentProfileId, getFormData());
+      setSaveStatus('saved');
+    } catch {
+      setSaveStatus('error');
+    }
+  }, 800);
+}
+
+// ── FORM DATA ─────────────────────────────────────────
+function getFormData() {
+  return {
+    name:         val('f-name'),
+    title:        val('f-title'),
+    email:        val('f-email'),
+    phone:        val('f-phone'),
+    location:     val('f-location'),
+    github:       val('f-github'),
+    website:      val('f-website'),
+    linkedin:     val('f-linkedin'),
+    summary:      val('f-summary'),
+    skills:       val('f-skills'),
+    soft:         val('f-soft'),
+    experiences:  getAllCards('exp-list'),
+    projects:     getAllCards('proj-list'),
+    educations:   getAllCards('edu-list'),
+    certifications: getAllCards('cert-list'),
+    languages:    getAllCards('lang-list'),
+  };
+}
+
+function setFormData(d) {
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  set('f-name',     d.name);
+  set('f-title',    d.title);
+  set('f-email',    d.email);
+  set('f-phone',    d.phone);
+  set('f-location', d.location);
+  set('f-github',   d.github);
+  set('f-website',  d.website);
+  set('f-linkedin', d.linkedin);
+  set('f-summary',  d.summary);
+  set('f-skills',   d.skills);
+  set('f-soft',     d.soft);
+
+  ['exp-list','proj-list','edu-list','cert-list','lang-list'].forEach(id => {
+    document.getElementById(id).innerHTML = '';
+  });
+  (d.experiences    || []).forEach(x => appendCard('exp-list',  x, expFields,  e => e.company || 'Expérience'));
+  (d.projects       || []).forEach(x => appendCard('proj-list', x, projFields, p => p.name || 'Projet'));
+  (d.educations     || []).forEach(x => appendCard('edu-list',  x, eduFields,  e => e.degree || 'Formation'));
+  (d.certifications || []).forEach(x => appendCard('cert-list', x, certFields, c => c.name || 'Certification'));
+  (d.languages      || []).forEach(x => appendCard('lang-list', x, langFields, l => l.lang || 'Langue'));
+}
+
+// ── ENTRY BUILDERS ────────────────────────────────────
+function makeEntry(listId, data, fields, titleFn) {
+  const card = document.createElement('div');
+  card.className = 'entry-card';
+  const head = document.createElement('div');
+  head.className = 'entry-head';
+  const chev = document.createElement('span');
+  chev.className = 'entry-chevron';
+  chev.textContent = '▶';
+  const titleEl = document.createElement('span');
+  titleEl.className = 'entry-title';
+  titleEl.textContent = titleFn(data);
+  const delBtn = document.createElement('button');
+  delBtn.className = 'btn btn-danger btn-sm';
+  delBtn.textContent = '✕';
+  delBtn.onclick = e => { e.stopPropagation(); card.remove(); renderAll(); scheduleSave(); };
+  head.append(chev, titleEl, delBtn);
+
+  const body = document.createElement('div');
+  body.className = 'entry-body';
+  fields.forEach(f => {
+    if (f.type === 'g2') {
+      const g = document.createElement('div');
+      g.className = 'g2';
+      f.fields.forEach(sf => {
+        const wrap = document.createElement('div');
+        const sl = document.createElement('label');
+        sl.textContent = sf.label;
+        const inp = document.createElement('input');
+        inp.type = 'text'; inp.dataset.key = sf.key; inp.value = data[sf.key] || '';
+        inp.oninput = () => { titleEl.textContent = titleFn(getCardData(card)); renderAll(); scheduleSave(); };
+        wrap.append(sl, inp); g.appendChild(wrap);
+      });
+      body.appendChild(g);
+    } else {
+      const lbl = document.createElement('label');
+      lbl.textContent = f.label;
+      body.appendChild(lbl);
+      if (f.type === 'textarea') {
+        const ta = document.createElement('textarea');
+        ta.rows = f.rows || 4; ta.dataset.key = f.key; ta.value = data[f.key] || '';
+        ta.oninput = () => { titleEl.textContent = titleFn(getCardData(card)); renderAll(); scheduleSave(); };
+        body.appendChild(ta);
+      } else {
+        const inp = document.createElement('input');
+        inp.type = 'text'; inp.dataset.key = f.key; inp.value = data[f.key] || '';
+        inp.oninput = () => { titleEl.textContent = titleFn(getCardData(card)); renderAll(); scheduleSave(); };
+        body.appendChild(inp);
+      }
+    }
+  });
+
+  head.onclick = () => { const o = body.classList.toggle('open'); chev.classList.toggle('open', o); };
+  card.append(head, body);
+  return card;
+}
+
+function getCardData(card) {
+  const d = {};
+  card.querySelectorAll('[data-key]').forEach(el => { d[el.dataset.key] = el.value; });
+  return d;
+}
+
+function getAllCards(listId) {
+  return [...document.querySelectorAll(`#${listId} .entry-card`)].map(c => getCardData(c));
+}
+
+const expFields  = [
+  { label: 'Entreprise', key: 'company', type: 'text' },
+  { label: 'Poste', key: 'role', type: 'text' },
+  { type: 'g2', fields: [{ label: 'Début', key: 'start' }, { label: 'Fin', key: 'end' }] },
+  { label: 'Missions (une par ligne)', key: 'bullets', type: 'textarea', rows: 5 }
+];
+const projFields = [
+  { label: 'Nom du projet', key: 'name', type: 'text' },
+  { label: 'Statut', key: 'status', type: 'text' },
+  { label: 'Description (une ligne par point)', key: 'bullets', type: 'textarea', rows: 4 }
+];
+const eduFields  = [
+  { label: 'Diplôme / Titre', key: 'degree', type: 'text' },
+  { label: 'École / Établissement', key: 'school', type: 'text' },
+  { type: 'g2', fields: [{ label: 'Début', key: 'start' }, { label: 'Fin', key: 'end' }] }
+];
+const certFields = [
+  { label: 'Nom de la certification', key: 'name', type: 'text' },
+  { label: 'Organisme', key: 'issuer', type: 'text' },
+  { label: 'Année', key: 'year', type: 'text' },
+  { label: 'Détails', key: 'detail', type: 'textarea', rows: 2 }
+];
+const langFields = [
+  { type: 'g2', fields: [{ label: 'Langue', key: 'lang' }, { label: 'Niveau', key: 'level' }] }
+];
+
+function appendCard(listId, data, fields, titleFn) {
+  document.getElementById(listId).appendChild(makeEntry(listId, data, fields, titleFn));
+}
+
+function addExp()  { appendCard('exp-list',  { company:'',role:'',start:'',end:'',bullets:'' }, expFields,  d=>d.company||'Nouvelle expérience'); renderAll(); scheduleSave(); }
+function addProj() { appendCard('proj-list', { name:'',status:'',bullets:'' },                  projFields, d=>d.name||'Nouveau projet');         renderAll(); scheduleSave(); }
+function addEdu()  { appendCard('edu-list',  { degree:'',school:'',start:'',end:'' },           eduFields,  d=>d.degree||'Nouvelle formation');   renderAll(); scheduleSave(); }
+function addCert() { appendCard('cert-list', { name:'',issuer:'',year:'',detail:'' },           certFields, d=>d.name||'Nouvelle certification'); renderAll(); scheduleSave(); }
+function addLang() { appendCard('lang-list', { lang:'',level:'' },                              langFields, d=>d.lang||'Nouvelle langue');        renderAll(); scheduleSave(); }
+
+// ── UTILS ─────────────────────────────────────────────
+const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const val = id => document.getElementById(id)?.value || '';
+const bulletsHtml = raw => (raw||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>`<li>${esc(l)}</li>`).join('');
+
+// ── RENDER DESIGN ─────────────────────────────────────
+function render() {
+  const name=val('f-name'),title=val('f-title'),email=val('f-email'),phone=val('f-phone'),
+        loc=val('f-location'),github=val('f-github'),website=val('f-website'),linkedin=val('f-linkedin'),
+        summary=val('f-summary'),skills=val('f-skills'),soft=val('f-soft');
+  const exps=getAllCards('exp-list'),projs=getAllCards('proj-list'),edus=getAllCards('edu-list'),
+        certs=getAllCards('cert-list'),langs=getAllCards('lang-list');
+
+  let h = `<div class="cv-header"><div class="cv-name">${esc(name)}</div>${title?`<div class="cv-jobtitle">${esc(title)}</div>`:''}</div>`;
+
+  let left = '';
+  const contacts = [
+    email    && `<div class="cv-contact-item"><i class="cv-contact-icon">✉</i>${esc(email)}</div>`,
+    phone    && `<div class="cv-contact-item"><i class="cv-contact-icon">☎</i>${esc(phone)}</div>`,
+    loc      && `<div class="cv-contact-item"><i class="cv-contact-icon">⚲</i>${esc(loc)}</div>`,
+    github   && `<div class="cv-contact-item"><i class="cv-contact-icon">⌥</i>${esc(github)}</div>`,
+    website  && `<div class="cv-contact-item"><i class="cv-contact-icon">🌐</i>${esc(website)}</div>`,
+    linkedin && `<div class="cv-contact-item"><i class="cv-contact-icon">in</i>${esc(linkedin)}</div>`,
+  ].filter(Boolean);
+  if (contacts.length) left += `<div class="cv-sec"><div class="cv-sec-title">Contact</div>${contacts.join('')}</div>`;
+
+  if (skills.trim()) {
+    const items = skills.split(',').map(s=>s.trim()).filter(Boolean);
+    left += `<div class="cv-sec"><div class="cv-sec-title">Compétences</div><ul class="cv-left-list">${items.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
+  }
+
+  const validLangs = langs.filter(l=>l.lang);
+  if (validLangs.length) {
+    left += `<div class="cv-sec"><div class="cv-sec-title">Langues</div>${validLangs.map(l=>`<div class="cv-lang-item"><strong>${esc(l.lang)}</strong>${l.level?`<span>${esc(l.level)}</span>`:''}</div>`).join('')}</div>`;
+  }
+
+  if (soft.trim()) {
+    const items = soft.split(',').map(s=>s.trim()).filter(Boolean);
+    left += `<div class="cv-sec"><div class="cv-sec-title">Qualités</div><ul class="cv-left-list">${items.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
+  }
+
+  const validCerts = certs.filter(c=>c.name);
+  if (validCerts.length) {
+    left += `<div class="cv-sec"><div class="cv-sec-title">Certifications</div>${validCerts.map(c=>`<div class="cv-cert-left"><div class="cv-cert-left-name">${esc(c.name)}</div><div class="cv-cert-left-sub">${[c.issuer,c.year].filter(Boolean).map(esc).join(' · ')}${c.detail?'<br>'+esc(c.detail):''}</div></div>`).join('')}</div>`;
+  }
+
+  let right = '';
+  if (summary.trim()) right += `<div class="cv-sec"><div class="cv-sec-title">Profil</div><div class="cv-summary">${esc(summary)}</div></div>`;
+
+  const validExps = exps.filter(e=>e.company||e.role);
+  if (validExps.length) {
+    right += `<div class="cv-sec"><div class="cv-sec-title">Expériences professionnelles</div>${validExps.map(e=>{
+      const dates=[e.start,e.end].filter(Boolean).join(' – '), bl=bulletsHtml(e.bullets);
+      return `<div class="cv-entry"><div class="cv-entry-hdr"><span class="cv-entry-co">${esc(e.company)}</span>${dates?`<span class="cv-entry-dates">${esc(dates)}</span>`:''}</div>${e.role?`<div class="cv-entry-role">${esc(e.role)}</div>`:''}${bl?`<ul>${bl}</ul>`:''}</div>`;
+    }).join('')}</div>`;
+  }
+
+  const validProjs = projs.filter(p=>p.name);
+  if (validProjs.length) {
+    right += `<div class="cv-sec"><div class="cv-sec-title">Projets personnels</div>${validProjs.map(p=>{
+      const bl=bulletsHtml(p.bullets);
+      return `<div class="cv-entry"><div class="cv-entry-hdr"><span class="cv-entry-co">${esc(p.name)}</span>${p.status?`<span class="cv-entry-dates">${esc(p.status)}</span>`:''}</div>${bl?`<ul>${bl}</ul>`:''}</div>`;
+    }).join('')}</div>`;
+  }
+
+  const validEdus = edus.filter(e=>e.degree||e.school);
+  if (validEdus.length) {
+    right += `<div class="cv-sec"><div class="cv-sec-title">Formations</div>${validEdus.map(e=>{
+      const dates=[e.start,e.end].filter(Boolean).join(' – ');
+      return `<div class="cv-edu-row"><div><div class="cv-edu-deg">${esc(e.degree)}</div>${e.school?`<div class="cv-edu-school">${esc(e.school)}</div>`:''}</div>${dates?`<div class="cv-edu-dates">${esc(dates)}</div>`:''}</div>`;
+    }).join('')}</div>`;
+  }
+
+  h += `<div class="cv-body"><div class="cv-col-left">${left}</div><div class="cv-col-right">${right}</div></div>`;
+  document.getElementById('cv').innerHTML = h;
+}
+
+// ── RENDER ATS ────────────────────────────────────────
+function renderAts() {
+  const name=val('f-name'),title=val('f-title'),email=val('f-email'),phone=val('f-phone'),
+        loc=val('f-location'),github=val('f-github'),website=val('f-website'),linkedin=val('f-linkedin'),
+        summary=val('f-summary'),skills=val('f-skills'),soft=val('f-soft');
+  const exps=getAllCards('exp-list'),projs=getAllCards('proj-list'),edus=getAllCards('edu-list'),
+        certs=getAllCards('cert-list'),langs=getAllCards('lang-list');
+
+  const sec = (t, inner) => `<section><h2>${t}</h2>${inner}</section>`;
+
+  let h = `<header>
+    <div class="name">${esc(name)}</div>
+    ${title?`<div class="jobtitle">${esc(title)}</div>`:''}
+    <div class="contact-bar">${[email,phone,loc,github,website,linkedin].filter(Boolean).map(esc).join('<span class="sep">|</span>')}</div>
+  </header>`;
+
+  if (summary.trim()) h += sec('Profil', `<p>${esc(summary)}</p>`);
+  if (skills.trim())  h += sec('Compétences techniques', `<p>${esc(skills)}</p>`);
+
+  const validExps = exps.filter(e=>e.company||e.role);
+  if (validExps.length) h += sec('Expériences professionnelles', validExps.map(e => {
+    const dates=[e.start,e.end].filter(Boolean).join(' – ');
+    const bl=(e.bullets||'').split('\n').map(l=>l.trim()).filter(Boolean);
+    return `<div class="entry"><div class="entry-top"><span class="entry-co">${esc(e.company)}</span>${dates?`<span class="entry-dates">${esc(dates)}</span>`:''}</div>${e.role?`<div class="entry-role">${esc(e.role)}</div>`:''}${bl.length?`<ul>${bl.map(b=>`<li>${esc(b)}</li>`).join('')}</ul>`:''}</div>`;
+  }).join(''));
+
+  const validProjs = projs.filter(p=>p.name);
+  if (validProjs.length) h += sec('Projets personnels', validProjs.map(p => {
+    const bl=(p.bullets||'').split('\n').map(l=>l.trim()).filter(Boolean);
+    return `<div class="entry"><div class="entry-top"><span class="entry-co">${esc(p.name)}</span>${p.status?`<span class="entry-dates">${esc(p.status)}</span>`:''}</div>${bl.length?`<ul>${bl.map(b=>`<li>${esc(b)}</li>`).join('')}</ul>`:''}</div>`;
+  }).join(''));
+
+  const validCerts = certs.filter(c=>c.name);
+  if (validCerts.length) h += sec('Certifications', validCerts.map(c =>
+    `<div class="entry"><div class="entry-top"><span class="entry-co">${esc(c.name)}</span>${c.year?`<span class="entry-dates">${esc(c.year)}</span>`:''}</div>${c.issuer?`<div class="entry-role">${esc(c.issuer)}</div>`:''}${c.detail?`<div class="entry-detail">${esc(c.detail)}</div>`:''}</div>`
+  ).join(''));
+
+  const validLangs = langs.filter(l=>l.lang);
+  if (validLangs.length) h += sec('Langues', `<p>${validLangs.map(l=>`<strong>${esc(l.lang)}</strong>${l.level?' : '+esc(l.level):''}`).join(' &nbsp;·&nbsp; ')}</p>`);
+
+  if (soft.trim()) h += sec('Qualités', `<p>${esc(soft)}</p>`);
+
+  const validEdus = edus.filter(e=>e.degree||e.school);
+  if (validEdus.length) h += sec('Formations', validEdus.map(e => {
+    const dates=[e.start,e.end].filter(Boolean).join(' – ');
+    return `<div class="entry"><div class="entry-top"><span class="entry-co">${esc(e.degree)}</span>${dates?`<span class="entry-dates">${esc(dates)}</span>`:''}</div>${e.school?`<div class="entry-role">${esc(e.school)}</div>`:''}</div>`;
+  }).join(''));
+
+  document.getElementById('cv-ats').innerHTML = h;
+}
+
+function renderAll() { render(); renderAts(); }
+
+// ── TAB SWITCHING ─────────────────────────────────────
+function switchTab(tab) {
+  const isDesign = tab === 'design';
+  document.getElementById('cv').classList.toggle('hidden', !isDesign);
+  document.getElementById('cv-ats').classList.toggle('visible', !isDesign);
+  document.getElementById('tab-design').classList.toggle('active', isDesign);
+  document.getElementById('tab-ats').classList.toggle('active', !isDesign);
+  document.getElementById('tab-hint').textContent = isDesign
+    ? '2 colonnes — aperçu visuel'
+    : 'Colonne unique — lisible par tous les ATS';
+}
+
+// ── INIT ──────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  let profiles = await fetchProfiles();
+
+  if (!profiles.length) {
+    const created = await createProfile('Joao Silva — Dev Web', DEFAULT);
+    profiles = [created];
+    await refreshProfileSelect(created.id);
+    await loadProfile(created.id);
+  } else {
+    await refreshProfileSelect(profiles[0].id);
+    await loadProfile(profiles[0].id);
+  }
+
+  document.getElementById('form-body').addEventListener('input', () => {
+    renderAll();
+    scheduleSave();
+  });
+});
+</script>
+</body>
+</html>

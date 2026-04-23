@@ -1,0 +1,97 @@
+{
+  "id": 2,
+  "name": "Joao Silva -- Dev Full Stack",
+  "data": {
+    "name": "Joao Silva",
+    "title": "Développeur Full Stack - Alternance",
+    "email": "joao@madebyjoao.fr",
+    "phone": "06 95 70 06 79",
+    "location": "Cannes La Bocca, 06150",
+    "github": "github.com/madebyjoao",
+    "website": "madebyjoao.fr",
+    "linkedin": "",
+    "summary": "En reconversion vers le développement web, je recherche une alternance d'un an. Ancien responsable travaux, je dispose de solides compétences en gestion de projet, organisation et résolution de problèmes. Je conçois des applications web, avec un fort intérêt pour les architectures backend et la sécurité applicative.",
+    "skills": "ReactJS, JavaScript (ES6+), Node.js / Express, TailwindCSS, MySQL, HTML5 / CSS3, Sequelize CLI, Angular, Git / GitHub, Python - Scripting",
+    "soft": "Esprit d'équipe, Apprentissage rapide, Adaptabilité, Sens des responsabilités",
+    "experiences": [
+      {
+        "company": "NeoGec",
+        "role": "Développeur Web Freelance",
+        "start": "2026",
+        "end": "En cours",
+        "bullets": "Conception et développement d'un site web professionnel complet\nAnalyse des besoins client et définition des fonctionnalités\nIntégration front-end : HTML5, CSS3, React\nDéveloppement backend avec Node.js / Express\nDéploiement et mise en production du site"
+      },
+      {
+        "company": "ST Aménagements",
+        "role": "Responsable Travaux",
+        "start": "2022",
+        "end": "2023",
+        "bullets": "Gestion et coordination de projets : planning, ressources, délais\nOrganisation et supervision des équipes terrain\nOptimisation des processus internes\nRelation client et suivi des prestations"
+      },
+      {
+        "company": "Duperrex Frères / Migros MVM (Suisse)",
+        "role": "Chef de déménagement",
+        "start": "2015",
+        "end": "2022",
+        "bullets": "Planification et organisation des déménagements\nCoordination des équipes et gestion des priorités\nRelation client et prestation de service personnalisé\nGestion logistique et respect des délais"
+      }
+    ],
+    "projects": [
+      {
+        "name": "Portfolio Builder",
+        "status": "En cours",
+        "bullets": "Application web de création de portfolios personnalisés\nSystème de templates dynamiques\nAPI REST avec Node.js / Express\nDéploiement automatisé des portfolios utilisateurs"
+      }
+    ],
+    "educations": [
+      {
+        "degree": "Développeur Web et Web Mobile",
+        "school": "La Plateforme — Cannes",
+        "start": "2025",
+        "end": "En cours"
+      },
+      {
+        "degree": "Formation Systems Administrator",
+        "school": "La Plateforme — Cannes",
+        "start": "2024",
+        "end": "2025"
+      },
+      {
+        "degree": "Licence en Chimie (3 ans)",
+        "school": "FCUP — Porto, Portugal",
+        "start": "2012",
+        "end": "2014"
+      },
+      {
+        "degree": "Baccalauréat Sciences & Technologies",
+        "school": "ESDAH — Porto, Portugal",
+        "start": "2009",
+        "end": "2012"
+      }
+    ],
+    "certifications": [
+      {
+        "name": "Formation Développement Web",
+        "issuer": "Codecademy",
+        "year": "2025 (en cours)",
+        "detail": "Angular, Node.js & Express, Sécurité applicative (SQL Injection, XSS)"
+      }
+    ],
+    "languages": [
+      {
+        "lang": "Portugais",
+        "level": "Langue maternelle"
+      },
+      {
+        "lang": "Anglais",
+        "level": "Bilingue (C2)"
+      },
+      {
+        "lang": "Français",
+        "level": "Professionnel (B2/C1)"
+      }
+    ]
+  },
+  "created_at": "2026-04-23T12:19:58.469Z",
+  "updated_at": "2026-04-23T12:20:46.842Z"
+}
