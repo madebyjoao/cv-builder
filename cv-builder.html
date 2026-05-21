@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CV Builder</title>
+<script src="/jspdf.umd.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -274,6 +275,27 @@ textarea { resize: vertical; min-height: 64px; }
 .cv-edu-school { font-size: 9.5pt; color: #444; margin-top: 1px; }
 .cv-edu-dates { font-size: 9pt; color: #555; white-space: nowrap; flex-shrink: 0; padding-top: 2px; }
 
+/* PDF Options sliders */
+.pdf-opts { margin-top: 6px; }
+.pdf-opt-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6px; }
+.pdf-opt-row > div label { display: flex; justify-content: space-between; margin-top: 0; font-size: 11px; color: var(--muted); }
+.pdf-opt-row > div label span { color: var(--accent); font-weight: 700; }
+input[type=range] { width: 100%; accent-color: var(--accent); cursor: pointer; margin-top: 3px; }
+
+/* PDF Preview Modal */
+#pdf-modal {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.88); flex-direction: column;
+}
+#pdf-modal.open { display: flex; }
+#pdf-modal-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px; background: var(--panel); border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+#pdf-modal-bar span { font-size: 13px; font-weight: 600; color: var(--text); }
+#pdf-iframe { flex: 1; width: 100%; border: none; background: #888; }
+
 /* Print */
 @media print {
   body { background: white !important; }
@@ -301,6 +323,30 @@ textarea { resize: vertical; min-height: 64px; }
     </div>
   </div>
   <div id="form-body">
+
+    <div class="section-label">Options PDF</div>
+    <div class="pdf-opts">
+      <div class="pdf-opt-row">
+        <div>
+          <label>Police <span id="lbl-fontsize">9</span>pt</label>
+          <input type="range" id="opt-fontsize" min="7" max="11" step="0.5" value="9">
+        </div>
+        <div>
+          <label>Interligne <span id="lbl-lineh">5.5</span>mm</label>
+          <input type="range" id="opt-lineh" min="3.5" max="7" step="0.5" value="5.5">
+        </div>
+      </div>
+      <div class="pdf-opt-row">
+        <div>
+          <label>Marge haut <span id="lbl-margintop">20</span>mm</label>
+          <input type="range" id="opt-margintop" min="8" max="30" step="2" value="20">
+        </div>
+        <div>
+          <label>Marge côtés <span id="lbl-marginsides">20</span>mm</label>
+          <input type="range" id="opt-marginsides" min="8" max="30" step="2" value="20">
+        </div>
+      </div>
+    </div>
 
     <div class="section-label">Informations personnelles</div>
     <label>Nom complet</label>
@@ -371,7 +417,9 @@ textarea { resize: vertical; min-height: 64px; }
       <button id="tab-ats"    class="tab-btn"        onclick="switchTab('ats')">ATS</button>
     </div>
     <span id="tab-hint">2 colonnes — aperçu visuel</span>
-    <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 Imprimer / PDF</button>
+    <button id="lang-toggle" class="btn btn-ghost btn-sm" onclick="toggleLang()" title="Langue des titres de sections">FR</button>
+    <button class="btn btn-ghost btn-sm" onclick="previewPdf()">👁 Preview PDF</button>
+    <button class="btn btn-accent btn-sm" onclick="downloadAtsPdf()">⬇ Download PDF</button>
   </div>
   <div id="cv-wrap">
     <div id="cv"></div>
@@ -380,6 +428,49 @@ textarea { resize: vertical; min-height: 64px; }
 </div>
 
 <script>
+// ── LANGUAGE & LABELS ────────────────────────────────
+let cvLang = 'fr';
+
+const LABELS = {
+  fr: {
+    contact: 'Contact',
+    profile: 'Profil',
+    skills: 'Compétences',
+    skillsFull: 'Compétences Techniques',
+    experience: 'Expériences Professionnelles',
+    projects: 'Projets Personnels',
+    certifications: 'Certifications',
+    languages: 'Langues',
+    qualities: 'Qualités',
+    education: 'Formations',
+  },
+  en: {
+    contact: 'Contact',
+    profile: 'Profile',
+    skills: 'Skills',
+    skillsFull: 'Technical Skills',
+    experience: 'Professional Experience',
+    projects: 'Personal Projects',
+    certifications: 'Certifications',
+    languages: 'Languages',
+    qualities: 'Core Competencies',
+    education: 'Education',
+  }
+};
+
+function formatDateRange(start, end) {
+  if (!start && !end) return '';
+  const ongoing = cvLang === 'en' ? 'Present' : 'En cours';
+  const endVal = (end && end.trim()) ? end.trim() : ongoing;
+  return start ? `${start} – ${endVal}` : endVal;
+}
+
+function toggleLang() {
+  cvLang = cvLang === 'fr' ? 'en' : 'fr';
+  document.getElementById('lang-toggle').textContent = cvLang.toUpperCase();
+  renderAll();
+}
+
 // ── DEFAULT DATA (used for first profile) ─────────────
 const DEFAULT = {
   name: 'Joao Silva',
@@ -408,7 +499,7 @@ const DEFAULT = {
     { degree: 'Baccalauréat Sciences & Technologies', school: 'ESDAH — Porto, Portugal', start: '2009', end: '2012' }
   ],
   certifications: [
-    { name: 'Formation Développement Web', issuer: 'Codecademy', year: '2025 (en cours)', detail: 'Angular, Node.js & Express, Sécurité applicative (SQL Injection, XSS)' }
+    { name: 'Formation Développement Web', issuer: 'Codecademy', year: '2025 – En cours', detail: 'Angular, Node.js & Express, Sécurité applicative (SQL Injection, XSS)' }
   ],
   languages: [
     { lang: 'Portugais', level: 'Langue maternelle' },
@@ -684,6 +775,7 @@ const bulletsHtml = raw => (raw||'').split('\n').map(l=>l.trim()).filter(Boolean
 
 // ── RENDER DESIGN ─────────────────────────────────────
 function render() {
+  const labels = LABELS[cvLang];
   const name=val('f-name'),title=val('f-title'),email=val('f-email'),phone=val('f-phone'),
         loc=val('f-location'),github=val('f-github'),website=val('f-website'),linkedin=val('f-linkedin'),
         summary=val('f-summary'),skills=val('f-skills'),soft=val('f-soft');
@@ -701,42 +793,42 @@ function render() {
     website  && `<div class="cv-contact-item"><i class="cv-contact-icon">🌐</i>${esc(website)}</div>`,
     linkedin && `<div class="cv-contact-item"><i class="cv-contact-icon">in</i>${esc(linkedin)}</div>`,
   ].filter(Boolean);
-  if (contacts.length) left += `<div class="cv-sec"><div class="cv-sec-title">Contact</div>${contacts.join('')}</div>`;
+  if (contacts.length) left += `<div class="cv-sec"><div class="cv-sec-title">${labels.contact}</div>${contacts.join('')}</div>`;
 
   if (skills.trim()) {
     const items = skills.split(',').map(s=>s.trim()).filter(Boolean);
-    left += `<div class="cv-sec"><div class="cv-sec-title">Compétences</div><ul class="cv-left-list">${items.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
+    left += `<div class="cv-sec"><div class="cv-sec-title">${labels.skills}</div><ul class="cv-left-list">${items.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
   }
 
   const validLangs = langs.filter(l=>l.lang);
   if (validLangs.length) {
-    left += `<div class="cv-sec"><div class="cv-sec-title">Langues</div>${validLangs.map(l=>`<div class="cv-lang-item"><strong>${esc(l.lang)}</strong>${l.level?`<span>${esc(l.level)}</span>`:''}</div>`).join('')}</div>`;
+    left += `<div class="cv-sec"><div class="cv-sec-title">${labels.languages}</div>${validLangs.map(l=>`<div class="cv-lang-item"><strong>${esc(l.lang)}</strong>${l.level?`<span>${esc(l.level)}</span>`:''}</div>`).join('')}</div>`;
   }
 
   if (soft.trim()) {
     const items = soft.split(',').map(s=>s.trim()).filter(Boolean);
-    left += `<div class="cv-sec"><div class="cv-sec-title">Qualités</div><ul class="cv-left-list">${items.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
+    left += `<div class="cv-sec"><div class="cv-sec-title">${labels.qualities}</div><ul class="cv-left-list">${items.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`;
   }
 
   const validCerts = certs.filter(c=>c.name);
   if (validCerts.length) {
-    left += `<div class="cv-sec"><div class="cv-sec-title">Certifications</div>${validCerts.map(c=>`<div class="cv-cert-left"><div class="cv-cert-left-name">${esc(c.name)}</div><div class="cv-cert-left-sub">${[c.issuer,c.year].filter(Boolean).map(esc).join(' · ')}${c.detail?'<br>'+esc(c.detail):''}</div></div>`).join('')}</div>`;
+    left += `<div class="cv-sec"><div class="cv-sec-title">${labels.certifications}</div>${validCerts.map(c=>`<div class="cv-cert-left"><div class="cv-cert-left-name">${esc(c.name)}</div><div class="cv-cert-left-sub">${[c.issuer,c.year].filter(Boolean).map(esc).join(' · ')}${c.detail?'<br>'+esc(c.detail):''}</div></div>`).join('')}</div>`;
   }
 
   let right = '';
-  if (summary.trim()) right += `<div class="cv-sec"><div class="cv-sec-title">Profil</div><div class="cv-summary">${esc(summary)}</div></div>`;
+  if (summary.trim()) right += `<div class="cv-sec"><div class="cv-sec-title">${labels.profile}</div><div class="cv-summary">${esc(summary)}</div></div>`;
 
   const validExps = exps.filter(e=>e.company||e.role);
   if (validExps.length) {
-    right += `<div class="cv-sec"><div class="cv-sec-title">Expériences professionnelles</div>${validExps.map(e=>{
-      const dates=[e.start,e.end].filter(Boolean).join(' – '), bl=bulletsHtml(e.bullets);
+    right += `<div class="cv-sec"><div class="cv-sec-title">${labels.experience}</div>${validExps.map(e=>{
+      const dates=formatDateRange(e.start,e.end), bl=bulletsHtml(e.bullets);
       return `<div class="cv-entry"><div class="cv-entry-hdr"><span class="cv-entry-co">${esc(e.company)}</span>${dates?`<span class="cv-entry-dates">${esc(dates)}</span>`:''}</div>${e.role?`<div class="cv-entry-role">${esc(e.role)}</div>`:''}${bl?`<ul>${bl}</ul>`:''}</div>`;
     }).join('')}</div>`;
   }
 
   const validProjs = projs.filter(p=>p.name);
   if (validProjs.length) {
-    right += `<div class="cv-sec"><div class="cv-sec-title">Projets personnels</div>${validProjs.map(p=>{
+    right += `<div class="cv-sec"><div class="cv-sec-title">${labels.projects}</div>${validProjs.map(p=>{
       const bl=bulletsHtml(p.bullets);
       return `<div class="cv-entry"><div class="cv-entry-hdr"><span class="cv-entry-co">${esc(p.name)}</span>${p.status?`<span class="cv-entry-dates">${esc(p.status)}</span>`:''}</div>${bl?`<ul>${bl}</ul>`:''}</div>`;
     }).join('')}</div>`;
@@ -744,8 +836,8 @@ function render() {
 
   const validEdus = edus.filter(e=>e.degree||e.school);
   if (validEdus.length) {
-    right += `<div class="cv-sec"><div class="cv-sec-title">Formations</div>${validEdus.map(e=>{
-      const dates=[e.start,e.end].filter(Boolean).join(' – ');
+    right += `<div class="cv-sec"><div class="cv-sec-title">${labels.education}</div>${validEdus.map(e=>{
+      const dates=formatDateRange(e.start,e.end);
       return `<div class="cv-edu-row"><div><div class="cv-edu-deg">${esc(e.degree)}</div>${e.school?`<div class="cv-edu-school">${esc(e.school)}</div>`:''}</div>${dates?`<div class="cv-edu-dates">${esc(dates)}</div>`:''}</div>`;
     }).join('')}</div>`;
   }
@@ -756,6 +848,7 @@ function render() {
 
 // ── RENDER ATS ────────────────────────────────────────
 function renderAts() {
+  const labels = LABELS[cvLang];
   const name=val('f-name'),title=val('f-title'),email=val('f-email'),phone=val('f-phone'),
         loc=val('f-location'),github=val('f-github'),website=val('f-website'),linkedin=val('f-linkedin'),
         summary=val('f-summary'),skills=val('f-skills'),soft=val('f-soft');
@@ -770,35 +863,35 @@ function renderAts() {
     <div class="contact-bar">${[email,phone,loc,github,website,linkedin].filter(Boolean).map(esc).join('<span class="sep">|</span>')}</div>
   </header>`;
 
-  if (summary.trim()) h += sec('Profil', `<p>${esc(summary)}</p>`);
-  if (skills.trim())  h += sec('Compétences techniques', `<p>${esc(skills)}</p>`);
+  if (summary.trim()) h += sec(labels.profile, `<p>${esc(summary)}</p>`);
+  if (skills.trim())  h += sec(labels.skillsFull, `<p>${esc(skills)}</p>`);
 
   const validExps = exps.filter(e=>e.company||e.role);
-  if (validExps.length) h += sec('Expériences professionnelles', validExps.map(e => {
-    const dates=[e.start,e.end].filter(Boolean).join(' – ');
+  if (validExps.length) h += sec(labels.experience, validExps.map(e => {
+    const dates=formatDateRange(e.start,e.end);
     const bl=(e.bullets||'').split('\n').map(l=>l.trim()).filter(Boolean);
     return `<div class="entry"><div class="entry-top"><span class="entry-co">${esc(e.company)}</span>${dates?`<span class="entry-dates">${esc(dates)}</span>`:''}</div>${e.role?`<div class="entry-role">${esc(e.role)}</div>`:''}${bl.length?`<ul>${bl.map(b=>`<li>${esc(b)}</li>`).join('')}</ul>`:''}</div>`;
   }).join(''));
 
   const validProjs = projs.filter(p=>p.name);
-  if (validProjs.length) h += sec('Projets personnels', validProjs.map(p => {
+  if (validProjs.length) h += sec(labels.projects, validProjs.map(p => {
     const bl=(p.bullets||'').split('\n').map(l=>l.trim()).filter(Boolean);
     return `<div class="entry"><div class="entry-top"><span class="entry-co">${esc(p.name)}</span>${p.status?`<span class="entry-dates">${esc(p.status)}</span>`:''}</div>${bl.length?`<ul>${bl.map(b=>`<li>${esc(b)}</li>`).join('')}</ul>`:''}</div>`;
   }).join(''));
 
   const validCerts = certs.filter(c=>c.name);
-  if (validCerts.length) h += sec('Certifications', validCerts.map(c =>
+  if (validCerts.length) h += sec(labels.certifications, validCerts.map(c =>
     `<div class="entry"><div class="entry-top"><span class="entry-co">${esc(c.name)}</span>${c.year?`<span class="entry-dates">${esc(c.year)}</span>`:''}</div>${c.issuer?`<div class="entry-role">${esc(c.issuer)}</div>`:''}${c.detail?`<div class="entry-detail">${esc(c.detail)}</div>`:''}</div>`
   ).join(''));
 
   const validLangs = langs.filter(l=>l.lang);
-  if (validLangs.length) h += sec('Langues', `<p>${validLangs.map(l=>`<strong>${esc(l.lang)}</strong>${l.level?' : '+esc(l.level):''}`).join(' &nbsp;·&nbsp; ')}</p>`);
+  if (validLangs.length) h += sec(labels.languages, `<p>${validLangs.map(l=>`<strong>${esc(l.lang)}</strong>${l.level?' : '+esc(l.level):''}`).join(' &nbsp;·&nbsp; ')}</p>`);
 
-  if (soft.trim()) h += sec('Qualités', `<p>${esc(soft)}</p>`);
+  if (soft.trim()) h += sec(labels.qualities, `<p>${esc(soft)}</p>`);
 
   const validEdus = edus.filter(e=>e.degree||e.school);
-  if (validEdus.length) h += sec('Formations', validEdus.map(e => {
-    const dates=[e.start,e.end].filter(Boolean).join(' – ');
+  if (validEdus.length) h += sec(labels.education, validEdus.map(e => {
+    const dates=formatDateRange(e.start,e.end);
     return `<div class="entry"><div class="entry-top"><span class="entry-co">${esc(e.degree)}</span>${dates?`<span class="entry-dates">${esc(dates)}</span>`:''}</div>${e.school?`<div class="entry-role">${esc(e.school)}</div>`:''}</div>`;
   }).join(''));
 
@@ -819,8 +912,522 @@ function switchTab(tab) {
     : 'Colonne unique — lisible par tous les ATS';
 }
 
+// ── PDF SETTINGS ─────────────────────────────────────
+function getPdfSettings() {
+  return {
+    fontSize:    parseFloat(document.getElementById('opt-fontsize').value),
+    lineH:       parseFloat(document.getElementById('opt-lineh').value),
+    marginTop:   parseInt(document.getElementById('opt-margintop').value),
+    marginSides: parseInt(document.getElementById('opt-marginsides').value),
+  };
+}
+
+// ── PDF BUILD — ATS (single column) ──────────────────
+function buildPdfDocAts() {
+  const { jsPDF } = window.jspdf;
+  const d = getFormData();
+  const labels = LABELS[cvLang];
+  const s = getPdfSettings();
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', putOnlyUsedFonts: true, compress: true });
+  const skillsArr = (d.skills || '').split(',').map(x => x.trim()).filter(Boolean);
+
+  doc.setProperties({
+    title: `${d.name} - CV`,
+    subject: `Curriculum Vitae - ${d.title}`,
+    author: d.name || '',
+    keywords: skillsArr.join(', '),
+    creator: 'CV Builder'
+  });
+
+  doc.setFont('helvetica');
+
+  let y = s.marginTop;
+  const left = s.marginSides;
+  const right = 210 - s.marginSides;
+  const { lineH, fontSize } = s;
+  const pageH = 297 - 10;
+
+  function checkPage(needed) {
+    if (y + (needed || 10) > pageH) { doc.addPage(); y = s.marginTop; }
+  }
+
+  function addSection(title) {
+    checkPage(12);
+    y += 3;
+    doc.setFontSize(fontSize);
+    doc.setFont('helvetica', 'bold');
+    doc.text(title.toUpperCase(), left, y);
+    y += 1.5;
+    doc.setLineWidth(0.3);
+    doc.line(left, y, right, y);
+    y += 4;
+    doc.setFont('helvetica', 'normal');
+  }
+
+  // Header
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.text(d.name || '', left, y);
+  y += 8;
+
+  if (d.title) {
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text(d.title, left, y);
+    y += 6;
+  }
+
+  const contactParts = [d.email, d.phone, d.location, d.website, d.github, d.linkedin].filter(Boolean);
+  if (contactParts.length) {
+    doc.setFontSize(fontSize);
+    const cLines = doc.splitTextToSize(contactParts.join('  |  '), right - left);
+    doc.text(cLines, left, y);
+    y += cLines.length * lineH;
+  }
+
+  // Profile
+  if (d.summary && d.summary.trim()) {
+    addSection(labels.profile);
+    doc.setFontSize(fontSize);
+    const lines = doc.splitTextToSize(d.summary.trim(), right - left);
+    checkPage(lines.length * lineH);
+    doc.text(lines, left, y);
+    y += lines.length * lineH;
+  }
+
+  // Skills
+  if (skillsArr.length) {
+    addSection(labels.skillsFull);
+    doc.setFontSize(fontSize);
+    const lines = doc.splitTextToSize(skillsArr.join(', '), right - left);
+    checkPage(lines.length * lineH);
+    doc.text(lines, left, y);
+    y += lines.length * lineH;
+  }
+
+  // Experience
+  const validExps = (d.experiences || []).filter(e => e.company || e.role);
+  if (validExps.length) {
+    addSection(labels.experience);
+    for (const e of validExps) {
+      checkPage(14);
+      const dates = formatDateRange(e.start, e.end);
+      doc.setFontSize(fontSize + 1);
+      doc.setFont('helvetica', 'bold');
+      doc.text(e.company || '', left, y);
+      if (dates) doc.text(dates, right, y, { align: 'right' });
+      y += lineH + 0.5;
+      if (e.role) {
+        doc.setFontSize(fontSize);
+        doc.setFont('helvetica', 'italic');
+        doc.text(e.role, left, y);
+        doc.setFont('helvetica', 'normal');
+        y += lineH + 0.5;
+      }
+      const bullets = (e.bullets || '').split('\n').map(l => l.trim()).filter(Boolean);
+      doc.setFontSize(fontSize);
+      doc.setFont('helvetica', 'normal');
+      for (const b of bullets) {
+        checkPage(lineH + 1);
+        doc.text('•', left + 2, y);
+        const bLines = doc.splitTextToSize(b, right - left - 8);
+        doc.text(bLines, left + 6, y);
+        y += bLines.length * lineH;
+      }
+      y += 2;
+    }
+  }
+
+  // Projects
+  const validProjs = (d.projects || []).filter(p => p.name);
+  if (validProjs.length) {
+    addSection(labels.projects);
+    for (const p of validProjs) {
+      checkPage(10);
+      doc.setFontSize(fontSize + 1);
+      doc.setFont('helvetica', 'bold');
+      doc.text(p.name || '', left, y);
+      if (p.status) doc.text(p.status, right, y, { align: 'right' });
+      y += lineH + 0.5;
+      doc.setFont('helvetica', 'normal');
+      const bullets = (p.bullets || '').split('\n').map(l => l.trim()).filter(Boolean);
+      doc.setFontSize(fontSize);
+      for (const b of bullets) {
+        checkPage(lineH + 1);
+        doc.text('•', left + 2, y);
+        const bLines = doc.splitTextToSize(b, right - left - 8);
+        doc.text(bLines, left + 6, y);
+        y += bLines.length * lineH;
+      }
+      y += 2;
+    }
+  }
+
+  // Certifications
+  const validCerts = (d.certifications || []).filter(c => c.name);
+  if (validCerts.length) {
+    addSection(labels.certifications);
+    for (const c of validCerts) {
+      checkPage(10);
+      doc.setFontSize(fontSize + 1);
+      doc.setFont('helvetica', 'bold');
+      doc.text(c.name || '', left, y);
+      if (c.year) doc.text(c.year, right, y, { align: 'right' });
+      y += lineH + 0.5;
+      doc.setFontSize(fontSize);
+      doc.setFont('helvetica', 'normal');
+      const sub = [c.issuer, c.detail].filter(Boolean).join(' — ');
+      if (sub) {
+        const lines = doc.splitTextToSize(sub, right - left);
+        checkPage(lines.length * lineH);
+        doc.text(lines, left, y);
+        y += lines.length * lineH;
+      }
+      y += 1.5;
+    }
+  }
+
+  // Languages
+  const validLangs = (d.languages || []).filter(l => l.lang);
+  if (validLangs.length) {
+    addSection(labels.languages);
+    doc.setFontSize(fontSize);
+    const langText = validLangs.map(l => `${l.lang}${l.level ? ': ' + l.level : ''}`).join('  ·  ');
+    const lines = doc.splitTextToSize(langText, right - left);
+    doc.text(lines, left, y);
+    y += lines.length * lineH;
+  }
+
+  // Qualities
+  if (d.soft && d.soft.trim()) {
+    addSection(labels.qualities);
+    doc.setFontSize(fontSize);
+    const lines = doc.splitTextToSize(d.soft.trim(), right - left);
+    checkPage(lines.length * lineH);
+    doc.text(lines, left, y);
+    y += lines.length * lineH;
+  }
+
+  // Education
+  const validEdus = (d.educations || []).filter(e => e.degree || e.school);
+  if (validEdus.length) {
+    addSection(labels.education);
+    for (const e of validEdus) {
+      checkPage(12);
+      const dates = formatDateRange(e.start, e.end);
+      doc.setFontSize(fontSize + 1);
+      doc.setFont('helvetica', 'bold');
+      doc.text(e.degree || '', left, y);
+      if (dates) doc.text(dates, right, y, { align: 'right' });
+      y += lineH + 0.5;
+      if (e.school) {
+        doc.setFontSize(fontSize);
+        doc.setFont('helvetica', 'normal');
+        doc.text(e.school, left, y);
+        y += lineH;
+      }
+      y += 1.5;
+    }
+  }
+
+  return doc;
+}
+
+// ── PDF BUILD — Design (two column) ──────────────────
+function buildPdfDocDesign() {
+  const { jsPDF } = window.jspdf;
+  const d = getFormData();
+  const s = getPdfSettings();
+  const labels = LABELS[cvLang];
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', putOnlyUsedFonts: true, compress: true });
+  const skillsArr = (d.skills || '').split(',').map(x => x.trim()).filter(Boolean);
+
+  doc.setProperties({
+    title: `${d.name} - CV`,
+    subject: `Curriculum Vitae - ${d.title}`,
+    author: d.name || '',
+    keywords: skillsArr.join(', '),
+    creator: 'CV Builder'
+  });
+
+  const { lineH, fontSize, marginTop: mTop, marginSides: mSide } = s;
+  const pageW = 210;
+  const pageH = 297 - 8;
+  const leftColW = 60;
+  const colGap = 6;
+  const leftX = mSide;
+  const divX = leftX + leftColW + colGap / 2;
+  const rightX = leftX + leftColW + colGap;
+  const rightW = pageW - mSide - rightX;
+  const rightEdge = pageW - mSide;
+  const lH = lineH - 0.5;
+
+  // ── HEADER ────────────────────────────────────────
+  let y = mTop;
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.text(d.name || '', leftX, y);
+  y += 8;
+  if (d.title) {
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text(d.title, leftX, y);
+    y += 5;
+  }
+  doc.setLineWidth(0.5);
+  doc.line(leftX, y, rightEdge, y);
+  y += 4;
+  const bodyY = y;
+
+  // vertical divider page 1
+  doc.setLineWidth(0.2);
+  doc.setDrawColor(200, 200, 200);
+  doc.line(divX, bodyY, divX, pageH);
+  doc.setDrawColor(0);
+
+  // ── LEFT COLUMN ───────────────────────────────────
+  let yL = bodyY;
+
+  function addLeftSection(title) {
+    yL += 2;
+    doc.setFontSize(fontSize - 1);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(42, 48, 96);
+    doc.text(title.toUpperCase(), leftX, yL);
+    yL += 1.5;
+    doc.setLineWidth(0.3);
+    doc.setDrawColor(90, 106, 170);
+    doc.line(leftX, yL, leftX + leftColW, yL);
+    doc.setDrawColor(0);
+    doc.setTextColor(0);
+    yL += 3.5;
+    doc.setFont('helvetica', 'normal');
+  }
+
+  const contactItems = [d.email, d.phone, d.location, d.github, d.website, d.linkedin].filter(Boolean);
+  if (contactItems.length) {
+    addLeftSection(labels.contact);
+    doc.setFontSize(fontSize - 1);
+    for (const c of contactItems) {
+      const lines = doc.splitTextToSize(c, leftColW);
+      doc.text(lines, leftX, yL);
+      yL += lines.length * lH;
+    }
+  }
+
+  if (skillsArr.length) {
+    addLeftSection(labels.skills);
+    doc.setFontSize(fontSize - 1);
+    for (const sk of skillsArr) {
+      const lines = doc.splitTextToSize('• ' + sk, leftColW);
+      doc.text(lines, leftX, yL);
+      yL += lines.length * lH;
+    }
+  }
+
+  const validLangs = (d.languages || []).filter(l => l.lang);
+  if (validLangs.length) {
+    addLeftSection(labels.languages);
+    doc.setFontSize(fontSize - 1);
+    for (const l of validLangs) {
+      doc.setFont('helvetica', 'bold');
+      doc.text(l.lang, leftX, yL);
+      yL += lH - 0.5;
+      if (l.level) {
+        doc.setFont('helvetica', 'normal');
+        doc.text(l.level, leftX, yL);
+        yL += lH - 0.5;
+      }
+    }
+    doc.setFont('helvetica', 'normal');
+  }
+
+  if (d.soft && d.soft.trim()) {
+    addLeftSection(labels.qualities);
+    doc.setFontSize(fontSize - 1);
+    for (const item of d.soft.split(',').map(x => x.trim()).filter(Boolean)) {
+      const lines = doc.splitTextToSize('• ' + item, leftColW);
+      doc.text(lines, leftX, yL);
+      yL += lines.length * lH;
+    }
+  }
+
+  const validCerts = (d.certifications || []).filter(c => c.name);
+  if (validCerts.length) {
+    addLeftSection(labels.certifications);
+    doc.setFontSize(fontSize - 1);
+    for (const c of validCerts) {
+      doc.setFont('helvetica', 'bold');
+      const nl = doc.splitTextToSize(c.name, leftColW);
+      doc.text(nl, leftX, yL);
+      yL += nl.length * lH;
+      doc.setFont('helvetica', 'normal');
+      const sub = [c.issuer, c.year].filter(Boolean).join(' · ');
+      if (sub) { const sl = doc.splitTextToSize(sub, leftColW); doc.text(sl, leftX, yL); yL += sl.length * (lH - 0.5); }
+      if (c.detail) { const dl = doc.splitTextToSize(c.detail, leftColW); doc.text(dl, leftX, yL); yL += dl.length * (lH - 0.5); }
+      yL += 1.5;
+    }
+  }
+
+  // ── RIGHT COLUMN ──────────────────────────────────
+  let yR = bodyY;
+
+  function checkRight(needed) {
+    if (yR + (needed || 10) > pageH) {
+      doc.addPage();
+      yR = mTop;
+      doc.setLineWidth(0.2);
+      doc.setDrawColor(200, 200, 200);
+      doc.line(divX, mTop - 4, divX, pageH);
+      doc.setDrawColor(0);
+    }
+  }
+
+  function addRightSection(title) {
+    checkRight(12);
+    yR += 2;
+    doc.setFontSize(fontSize);
+    doc.setFont('helvetica', 'bold');
+    doc.text(title.toUpperCase(), rightX, yR);
+    yR += 1.5;
+    doc.setLineWidth(0.4);
+    doc.setDrawColor(34, 34, 34);
+    doc.line(rightX, yR, rightEdge, yR);
+    doc.setDrawColor(0);
+    yR += 4;
+    doc.setFont('helvetica', 'normal');
+  }
+
+  if (d.summary && d.summary.trim()) {
+    addRightSection(labels.profile);
+    doc.setFontSize(fontSize);
+    const lines = doc.splitTextToSize(d.summary.trim(), rightW);
+    checkRight(lines.length * lineH);
+    doc.text(lines, rightX, yR);
+    yR += lines.length * lineH;
+  }
+
+  const validExps = (d.experiences || []).filter(e => e.company || e.role);
+  if (validExps.length) {
+    addRightSection(labels.experience);
+    for (const e of validExps) {
+      checkRight(14);
+      const dates = formatDateRange(e.start, e.end);
+      doc.setFontSize(fontSize + 1);
+      doc.setFont('helvetica', 'bold');
+      doc.text(e.company || '', rightX, yR);
+      if (dates) doc.text(dates, rightEdge, yR, { align: 'right' });
+      yR += lineH + 0.5;
+      if (e.role) {
+        doc.setFontSize(fontSize);
+        doc.setFont('helvetica', 'italic');
+        doc.text(e.role, rightX, yR);
+        doc.setFont('helvetica', 'normal');
+        yR += lineH;
+      }
+      doc.setFontSize(fontSize);
+      doc.setFont('helvetica', 'normal');
+      for (const b of (e.bullets || '').split('\n').map(l => l.trim()).filter(Boolean)) {
+        checkRight(lineH + 1);
+        doc.text('•', rightX + 2, yR);
+        const bl = doc.splitTextToSize(b, rightW - 6);
+        doc.text(bl, rightX + 6, yR);
+        yR += bl.length * lineH;
+      }
+      yR += 2;
+    }
+  }
+
+  const validProjs = (d.projects || []).filter(p => p.name);
+  if (validProjs.length) {
+    addRightSection(labels.projects);
+    for (const p of validProjs) {
+      checkRight(10);
+      doc.setFontSize(fontSize + 1);
+      doc.setFont('helvetica', 'bold');
+      doc.text(p.name || '', rightX, yR);
+      if (p.status) doc.text(p.status, rightEdge, yR, { align: 'right' });
+      yR += lineH + 0.5;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(fontSize);
+      for (const b of (p.bullets || '').split('\n').map(l => l.trim()).filter(Boolean)) {
+        checkRight(lineH + 1);
+        doc.text('•', rightX + 2, yR);
+        const bl = doc.splitTextToSize(b, rightW - 6);
+        doc.text(bl, rightX + 6, yR);
+        yR += bl.length * lineH;
+      }
+      yR += 2;
+    }
+  }
+
+  const validEdus = (d.educations || []).filter(e => e.degree || e.school);
+  if (validEdus.length) {
+    addRightSection(labels.education);
+    for (const e of validEdus) {
+      checkRight(10);
+      const dates = formatDateRange(e.start, e.end);
+      doc.setFontSize(fontSize + 1);
+      doc.setFont('helvetica', 'bold');
+      doc.text(e.degree || '', rightX, yR);
+      if (dates) doc.text(dates, rightEdge, yR, { align: 'right' });
+      yR += lineH + 0.5;
+      if (e.school) {
+        doc.setFontSize(fontSize);
+        doc.setFont('helvetica', 'normal');
+        doc.text(e.school, rightX, yR);
+        yR += lineH;
+      }
+      yR += 1.5;
+    }
+  }
+
+  return doc;
+}
+
+// ── PDF DISPATCHER ────────────────────────────────────
+function buildPdfDoc() {
+  const isDesign = document.getElementById('tab-design').classList.contains('active');
+  return isDesign ? buildPdfDocDesign() : buildPdfDocAts();
+}
+
+function downloadAtsPdf() {
+  const d = getFormData();
+  const doc = buildPdfDoc();
+  doc.save((d.name || 'CV').replace(/\s+/g, '_') + '_CV.pdf');
+}
+
+let _previewUrl = null;
+
+function previewPdf() {
+  const doc = buildPdfDoc();
+  if (_previewUrl) URL.revokeObjectURL(_previewUrl);
+  _previewUrl = URL.createObjectURL(doc.output('blob'));
+  document.getElementById('pdf-iframe').src = _previewUrl;
+  document.getElementById('pdf-modal').classList.add('open');
+}
+
+function closePdfModal() {
+  document.getElementById('pdf-modal').classList.remove('open');
+  document.getElementById('pdf-iframe').src = 'about:blank';
+  if (_previewUrl) { URL.revokeObjectURL(_previewUrl); _previewUrl = null; }
+}
+
+function downloadFromPreview() {
+  const d = getFormData();
+  buildPdfDoc().save((d.name || 'CV').replace(/\s+/g, '_') + '_CV.pdf');
+}
+
 // ── INIT ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+  ['fontsize', 'lineh', 'margintop', 'marginsides'].forEach(k => {
+    const el = document.getElementById(`opt-${k}`);
+    const lbl = document.getElementById(`lbl-${k}`);
+    if (el && lbl) el.addEventListener('input', () => { lbl.textContent = el.value; });
+  });
+
   let profiles = await fetchProfiles();
 
   if (!profiles.length) {
@@ -839,5 +1446,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 </script>
+<div id="pdf-modal">
+  <div id="pdf-modal-bar">
+    <span>PDF Preview</span>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-accent btn-sm" onclick="downloadFromPreview()">⬇ Download</button>
+      <button class="btn btn-ghost btn-sm" onclick="closePdfModal()">✕ Close</button>
+    </div>
+  </div>
+  <iframe id="pdf-iframe" src="about:blank"></iframe>
+</div>
 </body>
 </html>

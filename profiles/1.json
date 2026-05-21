@@ -3,15 +3,15 @@
   "name": "Joao Silva — Dev Web",
   "data": {
     "name": "Joao Silva",
-    "title": "Développeur Web & Web Mobile",
+    "title": "Developpeur web et web mobile",
     "email": "joao@madebyjoao.fr",
     "phone": "06 95 70 06 79",
     "location": "Cannes La Bocca, 06150",
     "github": "github.com/madebyjoao",
     "website": "madebyjoao.fr",
     "linkedin": "",
-    "summary": "En reconversion vers le développement web, je recherche une alternance d'un an. Ancien responsable travaux, je dispose de solides compétences en gestion de projet, organisation et résolution de problèmes. Je conçois des applications web, avec un fort intérêt pour les architectures backend et la sécurité applicative.",
-    "skills": "ReactJS, JavaScript (ES6+), Node.js / Express, TailwindCSS, MySQL, HTML5 / CSS3, Sequelize CLI, Angular, Git / GitHub, Python - Scripting",
+    "summary": "En reconversion vers le développement web, je recherche une alternance pour un BAC +3 d'un an. Ancien responsable travaux, je dispose de solides compétences en gestion de projet, organisation et résolution de problèmes. Je conçois des applications web, avec un fort intérêt pour les architectures backend et la sécurité applicative.",
+    "skills": "ReactJS, JavaScript (ES6+), Node.js / Express,  PHP, TailwindCSS, MySQL, HTML5 / CSS3, Sequelize CLI, Git / GitHub, Python - Scripting, Bash",
     "soft": "Esprit d'équipe, Apprentissage rapide, Adaptabilité, Sens des responsabilités",
     "experiences": [
       {
@@ -19,7 +19,7 @@
         "role": "Développeur Web Freelance",
         "start": "2026",
         "end": "En cours",
-        "bullets": "Conception et développement d'un site web professionnel complet\nAnalyse des besoins client et définition des fonctionnalités\nIntégration front-end : HTML5, CSS3, React\nDéveloppement backend avec Node.js / Express\nDéploiement et mise en production du site"
+        "bullets": "Conception et développement d'un site web professionnel complet\nAnalyse des besoins client et définition des fonctionnalités\nIntégration front-end : HTML5, TailwindCSS, React JS\nDéveloppement backend avec Node.js / Express\nDéploiement et mise en production du site"
       },
       {
         "company": "ST Aménagements",
@@ -93,5 +93,5 @@
     ]
   },
   "created_at": "2026-04-23T12:19:36.378Z",
-  "updated_at": "2026-04-23T12:19:36.378Z"
+  "updated_at": "2026-05-01T13:07:14.508Z"
 }

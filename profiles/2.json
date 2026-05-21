@@ -3,7 +3,7 @@
   "name": "Joao Silva -- Dev Full Stack",
   "data": {
     "name": "Joao Silva",
-    "title": "Développeur Full Stack - Alternance",
+    "title": "Développeur ReactJS + NodeJS",
     "email": "joao@madebyjoao.fr",
     "phone": "06 95 70 06 79",
     "location": "Cannes La Bocca, 06150",
@@ -61,12 +61,6 @@
         "school": "FCUP — Porto, Portugal",
         "start": "2012",
         "end": "2014"
-      },
-      {
-        "degree": "Baccalauréat Sciences & Technologies",
-        "school": "ESDAH — Porto, Portugal",
-        "start": "2009",
-        "end": "2012"
       }
     ],
     "certifications": [
@@ -79,19 +73,19 @@
     ],
     "languages": [
       {
-        "lang": "Portugais",
-        "level": "Langue maternelle"
-      },
-      {
         "lang": "Anglais",
         "level": "Bilingue (C2)"
       },
       {
         "lang": "Français",
         "level": "Professionnel (B2/C1)"
+      },
+      {
+        "lang": "Portugais",
+        "level": "Maternelle"
       }
     ]
   },
   "created_at": "2026-04-23T12:19:58.469Z",
-  "updated_at": "2026-04-23T12:20:46.842Z"
+  "updated_at": "2026-04-27T06:52:03.963Z"
 }
